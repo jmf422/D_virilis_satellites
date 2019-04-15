@@ -1,0 +1,111 @@
+---
+title: "D_montana_satellites"
+author: "Jullien Flynn"
+date: '2019-04-03'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+# bring in the depth file (depth was calculated as the amount of bp sequenced in all reads divided by the expected genome size from Bosco et al. 2007)
+
+samples_depth <- read.table ('/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Intra_inter_species_sequencing/ForR/montana_samples_read.depth')
+
+sample_names <- samples_depth$V1
+depths <- samples_depth$V3
+names(depths) <- sample_names
+
+
+#now bring in the compiled data. 
+
+data2 <- read.table ('/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Intra_inter_species_sequencing/ForR/Dmontana.rep.compiled', header=T)
+
+kmer.labels <- sapply(strsplit(colnames(data2), "\\."), '[', 1)
+colnames(data2) <- kmer.labels
+samples <- as.vector(data2$lines)
+samples2 <- sapply(strsplit(samples, "[.]"), '[', 1)
+#samples2
+data2[,1] <- NULL
+rownames(data2) <- samples2
+
+# put the depths in the same order as the dataframe
+data2_ordered <- data2[ order(row.names(data2)), ]
+depths_ordered <- depths[order(depths)]
+
+
+# now normalize the data
+data2_normalized <- data2_ordered/depths_ordered
+
+# now sort the data
+kmer_means <- colMeans(data2)
+data2_normalized_sorted <- data2_normalized[,order(kmer_means, decreasing=T)]
+data2_normalized_sorted[,1:10]
+
+# there are no AAACTAC family satellites at all.
+
+# look at the kmer length and how many of each
+
+get_kmer_lengths <- function (table_kmers) {
+  k <- c()
+  for (i in 1:ncol(table_kmers)) {
+    k <- c(k, nchar(colnames(table_kmers)[i]))
+  }
+  return(k)
+}
+kmer_lengths <- get_kmer_lengths(data2_normalized_sorted)
+
+data2_normalized_sorted_abun <- t(t(data2_normalized_sorted)*kmer_lengths) # no this can't be right
+data2_normalized_sorted_abun <- data2_normalized_sorted_abun[,-1]
+kmer_lengths[2:11]
+data2_normalized_sorted[,1:10]
+data2_normalized_sorted_abun[,1:10]
+
+length_classify <- function (kmer_sequence) {
+  x <- NULL
+  if (nchar(kmer_sequence) == 1) { x <- "1mer" }
+  else if (nchar(kmer_sequence) == 2) { x <- "2mer" }
+  else if (nchar(kmer_sequence) == 3) {  x <- "3mer" }
+  else if (nchar(kmer_sequence) == 4) { x <- "4mer" }
+  else if (nchar(kmer_sequence) == 5) { x <- "5mer" }
+  else if (nchar(kmer_sequence) == 6) { x <- "6mer" }
+  else if (nchar(kmer_sequence) == 7) { x <- "7mer" }
+  else if (nchar(kmer_sequence) > 7 & nchar(kmer_sequence) < 21) { x <- "8-20mer" }
+  return (x)
+}
+
+sum_kmer_class <- function (abundance_vec, class_vector) {
+  a <- sum(abundance_vec[which(class_vector == "1mer" )])
+  b <- sum(abundance_vec[which(class_vector == "2mer" )])
+  c <- sum(abundance_vec[which(class_vector == "3mer" )])
+  d <- sum(abundance_vec[which(class_vector == "4mer" )])
+  e <- sum(abundance_vec[which(class_vector == "5mer" )])
+  f <- sum(abundance_vec[which(class_vector == "6mer" )])
+  g <- sum(abundance_vec[which(class_vector == "7mer" )])
+  h <- sum(abundance_vec[which(class_vector == "8-20mer" )])
+  
+  output <- c(a,b,c,d,e,f,g,h)
+  names(output) <- c("1mer", "2mer", "3mer", "4mer", "5mer", "6mer", "7mer", "8-20mer")
+  return(output)
+}
+
+# just use Van
+
+montana_kmer_class <- sapply(colnames(data2_normalized_sorted_abun), length_classify)
+montana_sum_class <- sum_kmer_class(data2_normalized_sorted_abun[3,], montana_kmer_class)
+montana_df <- data.frame(kmer_class=names(montana_sum_class), repeat_span=montana_sum_class, species="montana")
+
+library(ggplot2)
+
+ggplot(montana_df, aes(fill=species, x=factor(kmer_class), y=repeat_span)) + 
+  geom_bar(position="dodge", stat="identity") + 
+  ylab("Total repeat span") +
+  #scale_x_discrete(limits = repeatspan_df$kmer_class) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, size=13, hjust = 1)) +
+  theme(axis.text.y = element_text(size=13), axis.title = element_text(size=13))
+
+# ok, AAAC is the most abundant

@@ -1,0 +1,275 @@
+---
+title: "longread_analysis"
+author: "Jullien Flynn"
+date: '2019-03-23'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+This file goes through the analysis of long read data (PacBio and Nanopore) using the k-Seek + Phobos method.  
+
+
+# 1) D. virilis PacBio data  
+
+```{r}
+
+Dvir_reps <-  read.delim("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/LongRead_kseek_Phobos/ForR/D_virilis.all.phobos.simple.out", header=FALSE)
+
+colnames (Dvir_reps) <- c("kmer", "count")
+
+# summarize the sequences
+Dvir_reps.simple <- tapply(Dvir_reps$count, Dvir_reps$kmer, sum)
+total_bp <- 40935421853
+genome_size <- 389000000
+depth <- total_bp/genome_size
+
+Dvir_reps_norm <- Dvir_reps.simple/depth
+
+Dvir_reps_sorted_norm <- sort(Dvir_reps_norm, decreasing = T)
+
+Dvir_reps_sorted_norm[1:5]
+kmers_of_interest <- c("AAACTAC", "AAACTAT", "AAATTAC", "AAACAAC", "AAACGAC")
+Dvir_reps_sorted_norm[kmers_of_interest]
+sum(Dvir_reps_sorted_norm[kmers_of_interest])
+
+```
+
+# 2) D. novamexicana PacBio data  
+
+```{r}
+Dnova.simple.out.all <- read.delim("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/LongRead_kseek_Phobos/ForR/Dnovamex.all.simple.out", header=FALSE)
+colnames (Dnova.simple.out.all) <- c("kmer", "count")
+
+# summarize the sequences
+Dnova.simple <- tapply(Dnova.simple.out.all$count, Dnova.simple.out.all$kmer, sum)
+
+Dnova_total_bases <- 40712554490
+Dnova_genome_size <- 2.5E8
+(Dnova_depth <- Dnova_total_bases/2.5E8)
+
+Dnova_norm <- Dnova.simple/Dnova_depth
+
+Dnova_sorted_norm <- sort(Dnova_norm, decreasing = T)
+
+Dnova_sorted_norm[1:5]
+
+Dnova_sorted_norm[kmers_of_interest]
+sum(Dnova_sorted_norm[kmers_of_interest])
+
+
+```
+
+# 3) D. americana PacBio data  
+
+```{r}
+
+D_americana_reps <-  read.delim("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/LongRead_kseek_Phobos/ForR/D_americana_all.phobos.simple.out", header=FALSE)
+
+colnames (D_americana_reps) <- c("kmer", "count")
+
+# summarize the sequences
+D_americana_reps.simple <- tapply(D_americana_reps$count, D_americana_reps$kmer, sum)
+D_americana_reps_sorted <- sort(D_americana_reps.simple, decreasing = T)
+
+total_bp <- 32814203651
+genome_size <- 240000000
+(depth <- total_bp/genome_size)
+
+D_americana_reps_sorted_norm <- D_americana_reps_sorted/depth
+
+D_americana_reps_sorted_norm[1:5]
+D_americana_reps_sorted_norm[kmers_of_interest]
+
+```
+
+# 4) D. hydei PacBio data 
+
+```{r}
+
+Dhyd.simple.out.all <- read.delim("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/LongRead_kseek_Phobos/ForR/Dhydei.simple.out.all.filtered", header=FALSE)
+colnames (Dhyd.simple.out.all) <- c("kmer", "count")
+
+# summarize the sequences
+Dhyd.simple <- tapply(Dhyd.simple.out.all$count, Dhyd.simple.out.all$kmer, sum)
+
+assembly_size <- 1.64E8
+reads_bases <- 19564840690
+(depth <- reads_bases/assembly_size)
+
+Dhyd.simple.norm <- Dhyd.simple/depth
+Dhyd.simple.norm.sorted <- sort (Dhyd.simple.norm, decreasing = T)
+Dhyd.simple.norm.sorted [1:10]
+
+
+```
+
+# 5) Now make a comparative plot  
+
+```{r}
+length_classify <- function (kmer_sequence) {
+  x <- NULL
+  if (nchar(kmer_sequence) == 1) { x <- "1mer" }
+  else if (nchar(kmer_sequence) == 2) { x <- "2mer" }
+  else if (nchar(kmer_sequence) == 3) {  x <- "3mer" }
+  else if (nchar(kmer_sequence) == 4) { x <- "4mer" }
+  else if (nchar(kmer_sequence) == 5) { x <- "5mer" }
+  else if (nchar(kmer_sequence) == 6) { x <- "6mer" }
+  else if (nchar(kmer_sequence) == 7) { x <- "7mer" }
+  else if (nchar(kmer_sequence) > 7 & nchar(kmer_sequence) < 21) { x <- "8-20mer" }
+  return (x)
+}
+
+sum_kmer_class <- function (abundance_vec, class_vector) {
+  a <- sum(abundance_vec[which(class_vector == "1mer" )])
+  b <- sum(abundance_vec[which(class_vector == "2mer" )])
+  c <- sum(abundance_vec[which(class_vector == "3mer" )])
+  d <- sum(abundance_vec[which(class_vector == "4mer" )])
+  e <- sum(abundance_vec[which(class_vector == "5mer" )])
+  f <- sum(abundance_vec[which(class_vector == "6mer" )])
+  g <- sum(abundance_vec[which(class_vector == "7mer" )])
+  h <- sum(abundance_vec[which(class_vector == "8-20mer" )])
+  
+  output <- c(a,b,c,d,e,f,g,h)
+  names(output) <- c("1mer", "2mer", "3mer", "4mer", "5mer", "6mer", "7mer", "8-20mer")
+  return(output)
+}
+
+Dvir_kmer_class <- sapply(names(Dvir_reps_sorted_norm), length_classify)
+Dvir_sum_class <- sum_kmer_class(Dvir_reps_sorted_norm, Dvir_kmer_class)
+Dvir_df <- data.frame(kmer_class=names(Dvir_sum_class), repeat_span=Dvir_sum_class, species="vir")
+
+Dnova_kmer_class <- sapply(names(Dnova_sorted_norm), length_classify)
+Dnova_sum_class <- sum_kmer_class(Dnova_sorted_norm, Dnova_kmer_class)
+Dnova_df <- data.frame(kmer_class=names(Dnova_sum_class), repeat_span=Dnova_sum_class, species="nova")
+
+Dhyd_kmer_class <- sapply(names(Dhyd.simple.norm.sorted), length_classify)
+Dhyd_sum_class <- sum_kmer_class(Dhyd.simple.norm.sorted, Dhyd_kmer_class)
+Dhyd_df <- data.frame(kmer_class=names(Dhyd_sum_class), repeat_span=Dhyd_sum_class, species="hydei")
+
+repeatspan_df <- rbind(Dvir_df, Dnova_df, Dhyd_df)
+
+library(ggplot2)
+ggplot(repeatspan_df, aes(fill=species, x=factor(kmer_class), y=repeat_span)) + 
+  geom_bar(position="dodge", stat="identity") + 
+  ylab("Total repeat span") +
+  #scale_x_discrete(limits = repeatspan_df$kmer_class) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, size=13, hjust = 1)) +
+  theme(axis.text.y = element_text(size=13), axis.title = element_text(size=13))
+
+```
+
+# 6) D. virilis Nanopore data  
+
+```{r}
+
+Dvir_pore_reps <-  read.delim("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/LongRead_kseek_Phobos/ForR/Dvir.nanopore.phobos.all.simple.out", header=FALSE)
+
+colnames (Dvir_pore_reps) <- c("kmer", "count")
+
+Dvir_porereps.simple <- tapply(Dvir_pore_reps$count, Dvir_pore_reps$kmer, sum)
+
+Dvir_porereps_sorted <- sort(Dvir_porereps.simple, decreasing = T)
+
+reads_bases=7223297550
+genome_size=3.89E8
+(depth=reads_bases/genome_size)
+Dvir_porereps_sorted_norm <- Dvir_porereps_sorted/depth
+
+get_kmer_length <- function (kmer) {
+  return(nchar(kmer))
+}
+
+Dvir_porereps_sorted_norm[which(get_kmer_length(names(Dvir_porereps_sorted_norm)) == 7)][1:10]
+
+kmers_of_interest2 <- c("AAACTAC", "AAACTAT", "AAATTAC", "AAACAAC", "AAATCAC", "AGCCTAT")
+
+Dvir_porereps_sorted_norm[kmers_of_interest2]
+sum(Dvir_porereps_sorted_norm[kmers_of_interest2])
+
+# make a plot now including Nanopore and PacBio amounts
+
+vir_sat <- read.csv("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/LongRead_kseek_Phobos/ForR/virilis_satellite_quant.csv", header=T)
+vir_sat
+
+(Pacbio_sats <- subset(vir_sat, Platform=="PacBio"))
+library(ggplot2)
+ggplot(Pacbio_sats, aes(fill=Approach, y=Amount, x=Satellite)) +
+  geom_bar(position="dodge", stat="identity") +
+  theme_bw() +
+  scale_x_discrete(limits = Pacbio_sats$Satellite) +
+  scale_y_continuous(limits=c(0,2.6e+07)) +
+  theme(legend.title=element_blank()) + 
+  theme(text = element_text(size=14)) + 
+  ylab("Amount (bp)") 
+
+# this one is for my presentation
+ggplot(Pacbio_sats, aes(fill=Approach, y=Amount, x=Satellite)) +
+  geom_bar(position="dodge", stat="identity") +
+  theme_bw() +
+  scale_x_discrete(limits = Pacbio_sats$Satellite) +
+  theme(legend.title=element_blank()) + 
+  theme(text = element_text(size=14)) + 
+  ylab("Amount (bp)")
+
+
+(Pacbio_sats <- subset(vir_sat, Platform=="PacBio"))
+library(ggplot2)
+ggplot(Pacbio_sats, aes(fill=Approach, y=Amount, x=Satellite)) +
+  geom_bar(position="dodge", stat="identity") +
+  theme_bw() +
+  scale_x_discrete(limits = Pacbio_sats$Satellite) +
+  scale_y_continuous(limits=c(0,2.85e+07)) +
+  theme(legend.title=element_blank()) + 
+  theme(text = element_text(size=14)) + 
+  ylab("Amount (bp)")
+
+(Nanopore_sats <- subset(vir_sat, Platform=="Nanopore"))
+
+ggplot(Nanopore_sats, aes(fill=Approach, y=Amount, x=Satellite)) +
+  geom_bar(position="dodge", stat="identity") +
+  theme_bw() +
+  scale_x_discrete(limits = Nanopore_sats$Satellite) +
+  scale_y_continuous(limits=c(0,2.85e+07)) +
+  theme(legend.title=element_blank()) + 
+  theme(text = element_text(size=14)) + 
+  ylab("Amount (bp)") 
+
+```
+
+# 6) Strand bias in the PacBio and Nanopore data
+
+```{r}
+strand_bias <- read.csv(file="/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/LongRead_kseek_Phobos/ForR/Strand_bias_summary2.csv", header=T)
+
+Pacbio_strand <- subset(strand_bias, Platform=="PacBio_real")
+
+ggplot(Pacbio_strand) +
+  geom_bar(aes(y=Percent, x=Satellite, fill=factor(Strand, levels=c("neg", "pos"))), stat="identity") +
+  theme_bw() +
+  scale_x_discrete(limits = Pacbio_strand$Satellite) +
+  theme(legend.title=element_blank()) +
+  theme(text = element_text(size=14), axis.text.x = element_text(angle=45, hjust=1))
+
+Pacbio_sim <- subset(strand_bias, Platform=="PacBio_sim")
+
+
+ggplot(Pacbio_sim) +
+  geom_bar(aes(y=Percent, x=Satellite, fill=factor(Strand, levels=c("neg", "pos"))), stat="identity") +
+  theme_bw() +
+  scale_x_discrete(limits = Pacbio_sim$Satellite) +
+  theme(legend.title=element_blank()) +
+  theme(text = element_text(size=14), axis.text.x = element_text(angle=45, hjust=1))
+
+
+Nanopore_real <- subset(strand_bias, Platform=="Nanopore_real")
+
+ggplot(Nanopore_real) +
+  geom_bar(aes(y=Percent, x=Satellite,  fill=factor(Strand, levels=c("neg", "pos"))), stat="identity", width = 0.5) +
+  theme_bw() +
+  scale_x_discrete(limits = Nanopore_real$Satellite) +
+  theme(legend.title=element_blank()) +
+  theme(text = element_text(size=14), axis.text.x = element_text(angle=45, hjust=1))  
+

@@ -1,0 +1,124 @@
+---
+title: "mock_genome"
+author: "Jullien Flynn"
+date: '2019-03-27'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+This script creates a D.virilis mock genome and shows the results after simulating reads from it. 
+
+```{r}
+make_chromosome <- function (centromere, pericentromere, cen_size, peri_size, rand_size, rand_GC, outfile, chr_name) {
+  cen_times <- cen_size/nchar(centromere)
+  cen_seq <- paste0(rep(centromere, times=cen_times), collapse="")
+  peri_times <- peri_size/nchar(pericentromere)
+  peri_seq <- paste0(rep(pericentromere, times=peri_times), collapse="")
+  
+  A_count <- (10*(1-rand_GC))/2
+  T_count <- A_count
+  G_count <- 5 - A_count
+  C_count <- G_count
+
+  bases <- c(rep("A", times=A_count), rep("T", times=T_count), rep("G", times=G_count), rep("C", times=C_count))
+  rand_seq <- paste0(sample(bases, size=rand_size, replace=T), collapse="")
+  
+  # now combine the sequences into a chromosome and write to file
+  
+  chrm_seq <- paste0(c(cen_seq,peri_seq,rand_seq), collapse="")
+  outdir="/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Simulations/Mock_genome/"
+  out_total <- paste0(outdir, outfile)
+  write(paste0(">", chr_name), file=out_total)
+  write(chrm_seq, file=out_total, append=T)
+  
+}
+
+# chr X will have AAATTAC
+# chr Y will have AAACTAT
+# chr 2 will have AAATTAC
+# chr 3 will have AAATTAC
+# chr 4 will have AAACTAT
+# chr 5 will have AAACTAC
+#chr 6 dot will have AAACTAC no pericentromere
+
+make_chromosome("AAACTAT", "AAACTAC", 4E6, 17E6, 3.4E7, 0.4, "chrY.fasta", "chrY")
+make_chromosome("AAACTAT", "AAACTAC", 5.5E6, 17E6, 3.5E7, 0.4, "chr4.fasta", "chr4")
+make_chromosome("AAACTAT", "AAACTAC", 4E6, 20E6, 3.6E7, 0.4, "chr5.fasta", "chr5")
+make_chromosome("AAACTAT", "AAACTAT", 5E5, 5E5, 5E5, 0.4, "chr6.fasta", "chr6")
+make_chromosome("AAATTAC", "AAACTAC", 6E6, 18E6, 3.7E7, 0.4, "chrX.fasta", "chr4")
+make_chromosome("AAATTAC", "AAACTAC", 5E6, 19E6, 3.3E7, 0.4, "chr2.fasta", "chr2")
+make_chromosome("AAATTAC", "AAACTAC", 6E6, 18E6, 3.5E7, 0.4, "chr3.fasta", "chr3")
+
+# total genome size
+sum(4E6, 17E6, 3.4E7, 5.5E6, 17E6, 3.5E7, 4E6, 20E6, 3.6E7, 5E5, 5E5, 5E5, 6E6, 18E6, 3.7E7, 5E6, 19E6, 3.3E7, 6E6, 18E6, 3.5E7)
+
+# total repetitive content
+
+(repeats <- sum (4E6, 17E6, 5.5E6, 17E6, 4E6, 20E6, 5E5, 5E5, 6E6, 18E6, 5E6, 19E6, 6E6, 18E6))
+(nonreps <- sum(3.4E7, 3.5E7, 3.6E7,  5E5, 3.7E7, 3.3E7, 3.5E7))
+repeats/(nonreps + repeats)
+(AAACTAC_total <- sum(17E6, 17E6, 20E6, 18E6, 19E6, 18E6))
+(AAACTAT_total <- sum(4E6, 5.5E6, 4E6, 5E5))
+(AAATTAC_total <- sum(6E6, 5E6, 6E6))
+
+```
+
+# let's bring in the summary from kSeek-Phobos simulation
+
+```{r}
+
+my_way <-  read.delim("~/Documents/AndyLab/Heterochromatin/PacBio_genomes/simulate_genome/Dvir.PacBio.phobos.simple.out", header=FALSE)
+
+colnames (my_way) <- c("kmer", "count")
+
+# summarize the sequences
+my_way.simple <- tapply(my_way$count, my_way$kmer, sum)
+head(my_way.simple)
+my_way_sorted <- sort(my_way.simple, decreasing = T)
+my_way_sorted[1:10]
+depth <- 10
+
+my_way_sorted_norm <- my_way_sorted/depth
+
+my_way_sorted_norm[c("AAACTAC", "AAATTAC", "AAACTAT")]/1E6
+# 21.5 Mb, 4.08 Mb, 2.86 Mb
+
+my_way_sorted_norm[1:50]
+sum(my_way_sorted_norm[1:50])
+
+```
+
+Now let's look at the NCRF results - simulate different percent divergences allowed.  
+
+```{r}
+
+repeats.percents <- read.delim("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Simulations/Mock_genome/repeats.found.percents", header=FALSE)
+colnames(repeats.percents) <- c("sat", "perc", "bp")
+repeats.percents$sat <- as.factor(repeats.percents$sat)
+repeats.percents
+library(ggplot2)
+ggplot (repeats.percents, aes(x=perc, y=bp, colour=sat)) +
+  geom_point(size=3)
+
+repeats.percents
+
+# choose 25% divergence for use  
+
+```
+
+Now make cumulative bar plot showing the quantification of satellites from the mock genome using the two different methods and the ground truth. 
+
+```{r}
+
+NCRF_amounts <- read.csv("~/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Simulations/Mock_genome/NCRF_simulated25_amounts.csv", header=T)
+NCRF_amounts
+library(ggplot2)
+ggplot(NCRF_amounts) +
+  geom_bar(aes(y=Amount, x=Satellite, fill=factor(Category, levels=c("actual", "found_NCRF", "found_KP"))), stat="identity") +
+  theme_bw() +
+  scale_x_discrete(limits = NCRF_amounts$Satellite) +
+  theme(legend.title=element_blank()) + 
+  theme(text = element_text(size=14)) + 
+  ylab("Amount (bp)")

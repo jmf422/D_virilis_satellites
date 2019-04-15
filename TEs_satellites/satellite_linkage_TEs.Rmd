@@ -1,0 +1,157 @@
+---
+title: "satellite_linkage_TEs"
+author: "Jullien Flynn"
+date: '2019-03-20'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This script goes through the analysis of non-satellite sequence on satellite containing reads.  First, I extracted reads containing at least 500 bp of 7mers found by NCRF and run the reads through RepeatMasker (with -nolow parameter to focus on TEs not simple repeats). Script used:  `TEs_satellites_reads.sh`  
+
+# 1) Look at the start and end positions of the TEs in the satellite reads.  
+Question: are TEs mostly found at the ends of satellite containing reads, which could indicate an enrichment of TEs flanking satellites.  
+
+```{r}
+
+AAACGAC.start.end <- read.table("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/TEs_satellites/ForR/virilis.all.AAACGAC.start.end")
+AAACGAC.start <- as.vector(AAACGAC.start.end$V1)
+AAACGAC.end <- as.vector(AAACGAC.start.end$V2)
+hist(AAACGAC.start)
+hist(AAACGAC.end)
+# want to select the ones and see the length here
+
+AAACTAC.start.end <- read.table("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/TEs_satellites/ForR/virilis.all.AAACTAC.start.end")
+AAACTAC.start <- as.vector(AAACTAC.start.end$V1)
+AAACTAC.end <- as.vector(AAACTAC.start.end$V2)
+hist(AAACTAC.start)
+hist(AAACTAC.end)
+
+AAACTAT.start.end <- read.table("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/TEs_satellites/ForR/virilis.all.AAACTAT.start.end")
+AAACTAT.start <- as.vector(AAACTAT.start.end$V1)
+AAACTAT.end <- as.vector(AAACTAT.start.end$V2)
+hist(AAACTAT.start)
+hist(AAACTAT.end)
+
+AAATTAC.start.end <- read.table("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/TEs_satellites/ForR/virilis.all.AAATTAC.start.end")
+AAATTAC.start <- as.vector(AAATTAC.start.end$V1)
+AAATTAC.end <- as.vector(AAATTAC.start.end$V2)
+hist(AAATTAC.start)
+hist(AAATTAC.end)  
+
+```
+
+# 2) Let's look at the type of TEs in the reads of different satellites.  
+
+*AAACTAC*  
+LINEs: 2730413 (19% of total), avg ins length: 1343.05  
+LTRs: 8774767 (61% of total), avg ins length: 1253.9  
+Helitrons: 2299330 (16% of total), avg ins length: 614.794  
+
+*AAATTAC*  
+LINEs: 58557 (18% of total), avg ins length: 1888.94  
+LTRs: 148086 (45% of total), avg ins length: 1784.17  
+Helitrons: 94380 (29% of total), avg ins length: 3146  
+
+*AAACTAT*  
+LINEs: 530349 (23% of total), avg ins length: 1555.28  
+LTRs: 1419772 (62% of total) , avg ins length: 1394.67  
+Helitrons: 303111 (13% of total), avg ins length: 1034.51  
+
+*AAACGAC* 
+LINEs: 1870114 (20% of total), avg ins length: 1473.69  
+LTRs: 6269856 (67% of total) , avg ins length: 1456.41  
+Helitrons: 1060767 (11% of total), avg ins length: 636.715  
+
+
+# 3) More specific now looking at enriched families 
+
+# need to report how many reads.  
+
+*AAACTAC*
+`cat virilis.all.AAACTAC.satellites.bed | awk '$5>500 {print $0}' | grep 'Gypsy-10_DVir' | cut -f 1 | sort -u | wc -l`
+Gypsy-10_DVir: 726 reads  
+Helitrons (Helitron-1N1_DVir, Helitron-1_DVir, Helitron-2N1_DVir, Helitron-2_DVir): 509 reads
+CR1-1_DVi: 445 reads
+Gypsy-2_DVir: 138 reads
+
+*AAACGAC*  
+Gypsy-10_DVir: 599 reads  
+Helitrons (Helitron-1N1_DVir, Helitron-1_DVir, Helitron-2N1_DVir, Helitron-2_DVir):  262 reads  
+CR1-1_DVi: 311
+Gypsy-2_DVir: 92 reads  
+
+*AAACTAT*  
+Gypsy-10_DVir: 123 reads  
+CR1-1_DVi: 67 reads 
+Penelope: 22 reads  
+
+*AAATTAC*  
+Gypsy-2_DVir: 21 reads  
+Penelope: 7 reads  
+
+
+# 4) Total number of satellite reads with TEs linked per satellite  
+Example code: `less virilis.all.AAACTAC.satellites.bed | awk '$5>500 {print $0}' | cut -f 1 | sort -u | wc -l`  
+AAACGAC: total reads: 49734 ; TE reads: 1816 = 3.65%  
+AAACTAC: total reads: 75364; TE reads: 2473 = 3.3%  
+AAACTAT: total reads: 715; TE reads: 300 = 42%  
+AAATTAC: total reads: 385; TE reads: 49 = 12.7%   
+
+# 5) Simulation: if TEs are only flanking satellites, than what percentage of reads with satellites would also have TEs?  
+
+Simulated a chromosome with a long array of satellite with a long array of Gypsy TEs flanking it. Then I simulated PacBio reads of it using our actual PacBio reads to simulate the same read length distribution. See script: `simulate_PacBio_reads_satGypsy.sh`.  
+
+How many reads have at least 500 bp of satellites and at least 500 bp of TE?  
+
+`cat AAACTAC_Gypsy.Rmasker.bed | grep 'S1' | awk '$5>500 {print $0}' | cut -f 1 | sort -u | wc -l`  
+Got 97 reads that had at least 500 bp TE insertion. 
+How many reads total?
+`less sd_0001.fastq | grep '^@S1' | wc -l`  
+Lots. 159,330 - only 0.06% in this case. 
+In our data, we have much higher percentages of reads overlapping TEs and satellites.  
+This indicates likely TEs are inserted into satellite arrays and not only flanking.  
+
+# 6) How many insertions are seeming to be very new (less divergence from consensus than average PacBio error rate?)  
+
+e.g command: `less virilis.all.AAACTAC.satellites.bed | awk '$5>500 {print $0}' | awk '$8<15 {print $0}' |  cut -f 1 | sort -u | wc -l`
+
+
+
+# 7) Telomere specific satellites are linked only to centromere-proximal satellites 
+
+Grepped for telomere TEs present in D. virilis: HeT-A and TART: 
+AAATTAC: sequence ~5% diverged from HeT-A3_DVi located on 1 read
+AAACTAC: sequence ~5% HeT-A3_DVi located on 1 read.
+AAACTAT: sequences related to TART located on 12 reads  
+
+Interestingly, a high number of R1 TEs, which are supposed to be localized only to rDNA are located in the satellite reads.  
+R1 sequences located in the satellites:  
+AAACTAC: 132 reads  
+AAACTAT: 5 reads
+AAACGAC: 117 reads  
+
+rRNA linked to satellites:  `cat virilis.all.AAACTAC.satellites.bed | awk '$5>500 {print $0}' | grep 'rRNA' |  cut -f 1 | sort -u | wc -l`  
+- 38 reads  
+`cat virilis.all.AAACTAC.satellites.bed | awk '$5>500 {print $0}' | grep 'rRNA' |  cut -f 1 | sort -u > AAACTAC.rRNA.reads`  
+`comm -12 AAACTAC.R1.reads AAACTAC.rRNA.reads | wc -l` --> 22 reads have AAACTAC, rRNA, and R1  
+`comm -23 AAACTAC.R1.reads AAACTAC.rRNA.reads | wc -l` --> 110 reads have AAACTAC and R1 but no rRNA
+
+Use the script `check_rDNA_R1.sh` to confirm this, using the full length rDNA sequence.  
+`cat AAACTAC.R1.Rmasker.bed | cut -f 1 | sort -u | wc -l`  
+Still, only 22 of these AAACTAC reads have R1 and rDNA - most have only R1.
+
+
+# 8) Pericentromeric satellite is linked to centromere satellites  
+
+`cat *AAACGAC.satellites.fasta | grep '^>' | cut -f 2 -d '>' | sort -u > virilis.AAACGAC.total.reads`
+
+`comm -12 virilis.AAATTAC.total.reads virilis.AAACTAC.total.reads | wc -l`  
+144 reads overlapping - this might be more concordant that they are separate  
+
+94 reads shared between AAACTAT and AAACTAC.
+
+0 reads shared between AAACTAT and AAATTAC - the centromeric satellites
+

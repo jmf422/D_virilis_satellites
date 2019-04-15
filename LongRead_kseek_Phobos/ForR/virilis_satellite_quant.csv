@@ -1,0 +1,9 @@
+Platform,Approach,Satellite,Amount
+PacBio,NCRF,AAACTAC,6454028
+PacBio,kSeek_Phobos,AAACTAC,5767622.63
+PacBio,NCRF,All,10913339.1
+PacBio,kSeek_Phobos,All,8790914.81
+Nanopore,NCRF,AAACTAC,19136307
+Nanopore,kSeek_Phobos,AAACTAC,20840723.19
+Nanopore,NCRF,All,23370246.96
+Nanopore,kSeek_Phobos,All,28248327

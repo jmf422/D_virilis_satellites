@@ -1,0 +1,276 @@
+---
+title: "Polyteny_analysis"
+author: "Jullien Flynn"
+date: '2019-03-18'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This script goes through the analysis to determine the effect of polyteny on quantification of satellites. First it uses D. melanogaster data: embryos and salivary glands from Yarosh and Spradling 2004, and flies from Gutzwiller et al. 2015.  
+
+Then we go on to analyze D. virilis data we produced ourselves from imaginal discs from male larvae compared to male flies. We also include analysis before and after filtering here to show the bias against satellite containing reads.  
+
+# 1) D. melanogaster analysis  
+
+```{r}
+
+kseek_data <- read.csv("~/Documents/AndyLab/Illumina-sequencing/melpolyteny.rep.compiled.GCcorr")
+
+# clean up data
+file_names <- as.vector(kseek_data$X)
+rownames(kseek_data) <- file_names
+# now get rid of the column that has the file name
+kseek_data[,1] <- NULL
+# the columns (kmers) by their mean abundance
+means <- colMeans(kseek_data)
+index.orders <- order(means, decreasing=T)
+kseek_data_ordered <- kseek_data[,order(means, decreasing=T)]
+# get rid of N 
+kseek_data_ordered$N <- NULL
+
+kmers_oi <- c("AACATAGAAT", "AATAT", "AATAG", "AAGAG", "AAGAC", "AACAC", "ACATATAT", "AAGAT", "AAGAGAG")
+
+kmers_oi <- c("AACATAGAAT", "AAGAG", "AAGAC", "AACAC", "AAGAT", "AAGAGAG")
+
+kseek_subset_koi <- data.frame(kseek_data_ordered[, kmers_oi])
+
+kmer_abundances <- c()
+kmer_names <- c()
+sample_names <- c()
+sample_category <- c()
+library(stringr)
+for (j in 1:ncol(kseek_subset_koi)) {
+  for (i in 1:nrow(kseek_subset_koi)) {
+    kmer_abundances <- c(kmer_abundances, kseek_subset_koi[i,j])
+    kmer_names <- c(kmer_names, colnames(kseek_subset_koi)[j])
+    x <- rownames(kseek_subset_koi)[i]
+    y <- str_sub(x, 1, str_length(x)-1)
+    sample_names <- c(sample_names, x)
+    sample_category <- c(sample_category, y)
+  }
+}
+ 
+kseek_to_plot <- data.frame (sample_names, sample_category, kmer_names, kmer_abundances )
+
+library(ggplot2)
+
+ggplot(data = kseek_to_plot, aes(x = kmer_names, y = kmer_abundances, fill = sample_category )) +
+  geom_bar(stat = "summary", fun.y = "mean", position = "dodge") +
+  geom_errorbar(stat = "summary", fun.data = mean_se, position = "dodge") +
+  xlab("kmer") +
+  ylab("Copy number") +
+  theme (axis.text.x = element_text(angle=45, hjust=1))
+
+# make a function that calculates the mean of all 3 groups for a specific kmer
+
+calculate_group_means <- function(kmer) {
+  embryo <- subset(kseek_to_plot, kmer_names==kmer & sample_category=="embryo")
+  mean_embryo <- mean(embryo$kmer_abundances)
+  fly <- subset(kseek_to_plot, kmer_names==kmer & sample_category=="fly")
+  mean_fly <- mean(fly$kmer_abundances)
+  salivary <- subset(kseek_to_plot, kmer_names==kmer & sample_category=="salivary")
+  mean_salivary <- mean(salivary$kmer_abundances)
+  result <- c(mean_embryo, mean_fly, mean_salivary)
+  names(result) <- c("embryo", "fly", "salivary")
+  return(result)
+}
+
+calculate_group_means("AAGAG")
+calculate_group_means("AACATAGAAT")
+calculate_group_means("AACAC")
+calculate_group_means("AAGAC")
+
+# look at microsatellites that are euchromatic now
+
+kmers_oi <- c("AC", "AGC", "C")
+
+kseek_subset_koi <- data.frame(kseek_data_ordered[, kmers_oi])
+
+kmer_abundances <- c()
+kmer_names <- c()
+sample_names <- c()
+sample_category <- c()
+
+for (j in 1:ncol(kseek_subset_koi)) {
+  for (i in 1:nrow(kseek_subset_koi)) {
+    kmer_abundances <- c(kmer_abundances, kseek_subset_koi[i,j])
+    kmer_names <- c(kmer_names, colnames(kseek_subset_koi)[j])
+    x <- rownames(kseek_subset_koi)[i]
+    y <- str_sub(x, 1, str_length(x)-1)
+    sample_names <- c(sample_names, x)
+    sample_category <- c(sample_category, y)
+  }
+}
+ 
+kseek_to_plot <- data.frame (sample_names, sample_category, kmer_names, kmer_abundances )
+
+ggplot(data = kseek_to_plot, aes(x = kmer_names, y = kmer_abundances, fill = sample_category )) +
+  geom_bar(stat = "summary", fun.y = "mean", position = "dodge") +
+  geom_errorbar(stat = "summary", fun.data = mean_se, position = "dodge") +
+  xlab("kmer") +
+  ylab("Copy number") +
+  theme (axis.text.x = element_text(angle=45, hjust=1))  
+
+```
+
+# 2) D. virilis - before filtering  
+
+```{r}
+depth <- c(15.506, 3.894)
+names(depth) <- c("Dvir_disks", "Dvir_flies")
+
+data2 <- read.delim ('/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Polyteny/ForR/Dvir_polyteny.rep.compiled')
+kmer.labels <- sapply(strsplit(colnames(data2), "\\."), '[', 1)
+colnames(data2) <- kmer.labels
+samples <- as.vector(data2$lines)
+samples2 <- sapply(strsplit(samples, "[.]"), '[', 1)
+data2[,1] <- NULL
+rownames(data2) <- samples2
+
+# now normalize the data
+data2_normalized <- data2/depth
+
+# now sort the data
+kmer_means <- colMeans(data2)
+data2_normalized_sorted <- data2_normalized[,order(kmer_means, decreasing=T)]
+
+data2_normalized_sorted[,1:10]
+
+# use the embryos - make a data frame so I can use it later.
+kmers_of_interest <- c("AAACTAC", "AAACTAT", "AAATTAC")
+post_qfiltering_flies <- data2_normalized_sorted[1, kmers_of_interest]
+
+data2_normalized_sorted[, kmers_of_interest]
+# total Mb of repeats
+(sum(data2_normalized_sorted[1, kmers_of_interest])*7)/10^6
+(sum(data2_normalized_sorted[2, kmers_of_interest])*7)/10^6
+
+```
+
+# 3) D. virilis - after filtering  
+
+```{r}
+depth <- c(18.44, 4.597)
+names(depth) <- c("Dvir_disks", "Dvir_flies")
+data3 <- read.delim ('/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Polyteny/ForR/Dvir_polyteny.allreads.rep.compiled')
+
+kmer.labels <- sapply(strsplit(colnames(data3), "\\."), '[', 1)
+colnames(data3) <- kmer.labels
+samples <- as.vector(data3$lines)
+samples2 <- sapply(strsplit(samples, "[.]"), '[', 1)
+data3[,1] <- NULL
+rownames(data3) <- samples2
+
+data3[,1:10]
+# now normalize the data
+data3_normalized <- data3/depth
+
+# now sort the data
+kmer_means <- colMeans(data3)
+data3_normalized_sorted <- data3_normalized[,order(kmer_means, decreasing=T)]
+
+data3_normalized_sorted[,1:10]
+
+no_qfiltering <- data3_normalized_sorted[1, kmers_of_interest]
+no_qfiltering
+rownames (no_qfiltering) <- c("no-filter")
+rownames (post_qfiltering_flies) <- c("q-filter")
+post_qfiltering_flies
+filter_compare <- rbind(no_qfiltering, post_qfiltering_flies)
+
+# now let's make a plot.
+kmer_abundances <- c()
+kmer_names <- c()
+sample_category <- c()
+for (j in 1:ncol(filter_compare)) {
+  for (i in 1:nrow(filter_compare)) {
+    kmer_abundances <- c(kmer_abundances, (filter_compare[i,j]*7)/10^6)
+    kmer_names <- c(kmer_names, colnames(filter_compare)[j])
+    sample_category <- c(sample_category, rownames(filter_compare)[i])
+  }
+}
+
+filter_compare_Mb <- data.frame(sample_category, kmer_names, kmer_abundances)
+filter_compare_Mb
+
+library(ggplot2)
+# Comparing fly data before and after filtering
+ggplot(data = filter_compare_Mb, aes(x = kmer_names, y = kmer_abundances, fill = sample_category )) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme_bw()
+
+## combine with polyteny comparison
+
+data_subset <- rbind(data3_normalized_sorted[c(1,2), kmers_of_interest], post_qfiltering_flies) 
+data_subset
+
+kmer_abundances <- c()
+kmer_names <- c()
+sample_names <- c()
+sample_category <- c()
+library(stringr)
+# look at this in ggplot
+for (j in 1:ncol(data_subset)) {
+  for (i in 1:nrow(data_subset)) {
+    kmer_abundances <- c(kmer_abundances, data_subset[i,j]*7)
+    kmer_names <- c(kmer_names, colnames(data_subset)[j])
+    x <- rownames(data_subset)[i]
+    y <- substr(x, 6, str_length(x))
+    sample_names <- c(sample_names, x)
+    sample_category <- c(sample_category, y)
+  }
+}
+
+polyteny_fig <- data.frame(sample_names, sample_category, kmer_names, kmer_abundances)
+polyteny_fig
+
+ggplot(data = polyteny_fig, aes(x = kmer_names, y = kmer_abundances, fill = sample_category )) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme_bw() 
+  
+# total Mb of repeats
+# discs
+(sum(data3_normalized_sorted[1, kmers_of_interest])*7)/10^6
+# flies
+(sum(data3_normalized_sorted[2, kmers_of_interest])*7)/10^6
+
+# looking at microsatellites, they are equivalent.
+data3_normalized_sorted[ c(1,2), c("AT", "AC", "AG")]
+# make a plot for the microsatellites
+
+microsats <- c("AT", "AC", "AG")
+data_subset <- data3_normalized_sorted[c(1,2), microsats]
+
+
+kmer_abundances <- c()
+kmer_names <- c()
+sample_names <- c()
+sample_category <- c()
+library(stringr)
+# look at this in ggplot
+for (j in 1:ncol(data_subset)) {
+  for (i in 1:nrow(data_subset)) {
+    kmer_abundances <- c(kmer_abundances, data_subset[i,j]*2)
+    kmer_names <- c(kmer_names, colnames(data_subset)[j])
+    x <- rownames(data_subset)[i]
+    y <- substr(x, 6, str_length(x))
+    sample_names <- c(sample_names, x)
+    sample_category <- c(sample_category, y)
+  }
+}
+
+polyteny_fig <- data.frame(sample_names, sample_category, kmer_names, kmer_abundances)
+polyteny_fig
+
+ggplot(data = polyteny_fig, aes(x = kmer_names, y = kmer_abundances, fill = sample_category )) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme_bw() + theme(legend.title=element_blank()) + 
+  theme(text = element_text(size=16)) + 
+  ylab("Amount (bp)")
+
+
+# I am  interested to see if the ratio is similar for these top 3 7mers. Answer: yes!
+data3_normalized_sorted[2, kmers_of_interest]/data3_normalized_sorted[1, kmers_of_interest]

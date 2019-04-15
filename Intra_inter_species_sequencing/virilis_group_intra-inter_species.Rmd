@@ -1,0 +1,483 @@
+---
+title: "virilis_group_intra-inter_species"
+author: "Jullien Flynn"
+date: '2019-03-19'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This script goes through the analysis of simple satellites across multiple strains of the three D. virilis group species we are studying. 
+
+## Load in data (from k-seek) and do basic processing  
+
+```{r}
+
+# bring in the depth file (depth was calculated as the amount of bp sequenced in all reads divided by the expected genome size from Bosco et al. 2007)
+
+samples_depth <- read.csv ('/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Intra_inter_species_sequencing/ForR/samples_depth.csv')
+
+sample_names <- samples_depth$Sample
+samples_depth[,1] <- NULL
+rownames(samples_depth) <- sample_names
+
+#now bring in the compiled data. 
+
+data2 <- read.delim ('/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Intra_inter_species_sequencing/ForR/Dvir_diversity.rep.compiled')
+
+kmer.labels <- sapply(strsplit(colnames(data2), "\\."), '[', 1)
+colnames(data2) <- kmer.labels
+samples <- as.vector(data2$lines)
+samples2 <- sapply(strsplit(samples, "[.]"), '[', 1)
+#samples2
+data2[,1] <- NULL
+rownames(data2) <- samples2
+
+# put the depths in the same order as the dataframe
+data2_ordered <- data2[ order(row.names(data2)), ]
+
+samples_depth_ordered <- samples_depth[ order(row.names(samples_depth)), ]
+
+# now normalize the data
+data2_normalized <- data2_ordered/samples_depth_ordered
+
+# now sort the data
+kmer_means <- colMeans(data2)
+data2_normalized_sorted <- data2_normalized[,order(kmer_means, decreasing=T)]
+
+# now bring in the sample identities
+
+sample_identities <- read.table ('/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Intra_inter_species_sequencing/ForR/sample.identities', header=F)
+
+sample_names <- sample_identities$V1
+sample_identities$V1 <- NULL
+colnames(sample_identities) <- "species"
+rownames(sample_identities) <- sample_names
+
+# merge in the species identities so we can easily categorize them
+data_classified <- merge (sample_identities, data2_normalized_sorted, by=0)  
+
+sample.labels <- sapply(strsplit(data_classified$Row.names, "_"), '[', 1)
+data_classified$Row.names <- sample.labels
+data_classified[,1:5]
+
+```
+# 1) Look at variation among AAACTAC amount and total bp of simple satellites across species  
+
+```{r}
+
+library(ggplot2)
+
+ggplot(data = data_classified, aes(x = species, y = AAACTAC)) + 
+  geom_boxplot() +
+  geom_jitter(color="tomato") +
+  xlab("Species") +
+  ylab("total AAACTAC copy #")
+
+ggplot(data = data_classified, aes(x = species, y = total_bp)) + 
+  geom_boxplot() +
+  geom_jitter(color="tomato") +
+  xlab("Species") +
+  ylab("total satellite span (bp)")  
+
+  
+```
+  
+# 2) Produce PCAs with the 4 main satellites (AAACTAC, AAACTAT, AAATTAC, AAACAAC) and the top 20 most abundant satellites  
+
+```{r}
+kmers_of_interest <- c("AAACTAC", "AAACTAT", "AAATTAC", "AAACAAC")
+
+pca.data <- prcomp(data_classified[, kmers_of_interest], scale.=T)
+library(ggbiplot)
+
+g <- ggbiplot(pca.data, obs.scale = 1, var.scale = 1, groups = data_classified$species, var.axes = F, alpha=0.8) #labels=data3$Row.names
+g <- g + scale_color_discrete(name='')
+g <- g + theme(legend.direction='horizontal', legend.position='top')
+print(g)
+
+# let's use the whole dataset and see how the PCA looks
+pca.data <- prcomp(data_classified[,3:22], scale.=T)
+g <- ggbiplot(pca.data, obs.scale = 1, var.scale = 1, groups = data_classified$species, var.axes = F, alpha=0.8)
+g <- g + scale_color_discrete(name='')
+g <- g + theme(legend.direction='horizontal', legend.position='top')
+print(g)  
+
+```
+  
+# 3) Now, let's take a closer look at the abundance of satellites in the D. virilis samples.  
+
+```{r}
+data_virilis <- subset(data_classified, species=="vir")
+vir_names <- data_virilis$Row.names
+rownames(data_virilis) <- vir_names
+data_virilis[,kmers_of_interest]*7
+totals_vir <- rowSums(data_virilis[,kmers_of_interest]*7)
+
+# which sample has the least amount of satellites and which has the most?
+totals_vir[which(totals_vir == max(totals_vir))]
+totals_vir[which(totals_vir == min(totals_vir))]
+
+# Get the mean amounts of each satellites.
+
+mean(data_virilis$AAACTAC)
+mean(data_virilis$AAACAAC)
+mean(data_virilis$AAACTAT)
+mean(data_virilis$AAATTAC)
+
+# bring in the geographical origin
+virilis_ori <- read.csv('/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Intra_inter_species_sequencing/ForR/virilis_origins.csv')
+
+virilis_ori[!apply(virilis_ori == "", 1, all),]
+
+virilis_ori$Sample <- as.vector(virilis_ori$Sample)
+sample.labels <- sapply(strsplit(virilis_ori$Sample, "_"), '[', 1)
+virilis_ori$Sample <- sample.labels
+
+data_virilis_ori <- merge(data_virilis, virilis_ori, by.x=1, by.y=1)
+  
+data_virilis_ori$Origin <- factor(data_virilis_ori$Origin, levels = c("AFR", "ENG", "USSR", "CHINA", "JAP", "NAm", "CAm", "SAm", "Un-F", "Un-M"))
+
+pca.data <- prcomp(data_virilis_ori[, kmers_of_interest], scale.=T)
+
+g <- ggbiplot(pca.data, obs.scale = 1, var.scale = 1, groups = data_virilis_ori$Origin, var.axes = F, alpha=0.8)
+g <- g + scale_color_discrete(name='')
+g <- g + theme(legend.direction='horizontal', legend.position='top')
+print(g)
+
+pca.data <- prcomp(data_virilis_ori[, 4:23], scale.=T)
+
+g <- ggbiplot(pca.data, obs.scale = 1, var.scale = 1, groups = data_virilis_ori$Origin, var.axes = F, alpha=0.8)
+g <- g + scale_color_discrete(name='')
+g <- g + theme(legend.direction='horizontal', legend.position='top')
+print(g)  
+
+# now let's make some plots relating the satellite amount to the geography.  
+
+
+(plot_data <- data_virilis_ori[, c("Row.names", "total_bp", "Origin", "AAACTAC", "AAACTAT", "AAATTAC")])
+ggplot(plot_data, aes(y=AAATTAC*7, x=Origin)) +
+  geom_point(size=2) +
+  theme_bw() +
+  geom_text(aes(label=Row.names),hjust=0.5, vjust=1) +
+  ylab("total AAATTAC span (bp)") +
+  theme(text = element_text(size=12))
+
+ggplot(plot_data, aes(y=AAACTAC*7, x=Origin)) +
+  geom_point(size=2) +
+  theme_bw() +
+  geom_text(aes(label=Row.names),hjust=0.5, vjust=1.0) +
+  ylab("total AAACTAC span (bp)") +
+  theme(text = element_text(size=12))
+
+ggplot(plot_data, aes(y=AAACTAT*7, x=Origin)) +
+  geom_point(size=2) + 
+   theme_bw() +
+  geom_text(aes(label=Row.names),hjust=0.5, vjust=1.0) +
+  ylab("total AAACTAT span (bp)") +
+  theme(text = element_text(size=12)) 
+
+ggplot(plot_data, aes(y=total_bp, x=Origin)) +
+  geom_point(size=2) + 
+   theme_bw() +
+  geom_text(aes(label=Row.names),hjust=0.5, vjust=1.0) +
+  ylab("total satellites (bp)") +
+  theme(text = element_text(size=12)) 
+# not a strong pattern in total bp  
+
+ggplot(plot_data, aes(y=AAATTAC, x=AAACTAT)) +
+  geom_point(size=2) + 
+   theme_bw() +
+  geom_text(aes(label=Row.names),hjust=0.5, vjust=1.0) +
+  ylab("AAATTAC") +
+  xlab("AAACTAT") +
+  theme(text = element_text(size=12))
+
+ggplot(plot_data, aes(y=AAATTAC, x=total_bp)) +
+  geom_point(size=2) + 
+   theme_bw() +
+  geom_text(aes(label=Row.names),hjust=0.5, vjust=1.0) +
+  ylab("AAATTAC") +
+  xlab("total_bp") +
+  theme(text = element_text(size=12))
+#interesting pattern here
+
+```
+  
+# 4) Now, in D. virilis, compare the amount of DINE-1 to the amount of pericentromeric AAACTAC (both expected to be high abundance on the 5th chromosome)  
+Note: DINE amount was calculated as the number of reads that mapped to our library divided by the average depth. 
+
+```{r}
+
+virilis_DINE <- read.csv ('/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Intra_inter_species_sequencing/ForR/virilis_DINE.csv')
+
+data_virilis_DINE <- merge(virilis_DINE, data_virilis, by.x=1, by.y=1)
+
+ggplot(data_virilis_DINE, aes(y=AAACTAC, x=DINE)) +
+  geom_point(size=2) +
+  geom_text(aes(label=Strain),hjust=0.5, vjust=1.0) +
+  theme_bw() +
+  theme(text = element_text(size=12))  
+  
+# notes: Males have more DINEs than females (comparison of genome strain), but still has lower DINEs than the others.
+  # vir00 has the highest AAACTAC amount. It is an outlier in DINE amount. All other strains cluster very closely in DINE amount.  
+  
+```
+  
+# 5) Now, let's look closer at simple satellites in D. americana and their relationship to the presence of the X-4 fusion  
+
+Note: 100 means the fusion is at 100% frequency in that strain (i.e. is fixed) and 0 means the fusion is at 0% frequency in that strain (i.e. it is absent)  
+
+```{r}
+
+data_americana <- subset(data_classified, species=="amer")
+
+# get the mean of the abundant satellites
+mean(data_americana$AAACTAC)
+mean(data_americana$AAACAAC)
+
+americana_fus <- read.csv('/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Intra_inter_species_sequencing/ForR/americana_fusion_status.csv')
+americana_fus$Sample <- as.vector(americana_fus$Sample)
+sample.labels <- sapply(strsplit(americana_fus$Sample, "_"), '[', 1)
+americana_fus$Sample <- sample.labels
+
+data_amer_fus <- merge(data_americana, americana_fus, by.x=1, by.y=1)
+data_amer_fus$Status <- as.factor(data_amer_fus$Status)
+
+amer_names <- data_amer_fus$Row.names
+rownames(data_amer_fus) <- amer_names
+data_amer_fus[,kmers_of_interest]*7
+# note the inbred genome strain also has the lowest amount, G96.  
+
+# Let's do PCAs.
+
+pca.data <- prcomp(data_amer_fus[, kmers_of_interest], scale.=T)
+g <- ggbiplot(pca.data, obs.scale = 1, var.scale = 1, groups = data_amer_fus$Status, var.axes = F, alpha=0.8)
+g <- g + scale_color_discrete(name='') +
+  geom_point(aes(colour=data_amer_fus$Status ), size=4)
+g <- g + theme(legend.direction='horizontal', legend.position='top')
+print(g)  
+
+# now using all abundant satellites.  
+
+pca.data <- prcomp(data_amer_fus[, 3:22], scale.=T)
+g <- ggbiplot(pca.data, obs.scale = 1, var.scale = 1, groups = data_amer_fus$Status, var.axes = F, alpha=0.8) + theme_bw()
+g <- g + scale_color_discrete(name='') +
+  geom_point(aes(colour=data_amer_fus$Status ), size=4)  
+g <- g + theme(legend.direction='horizontal', legend.position='top')
+print(g)
+# look at the pericentromeric and centromeric satellite for a comparison.  
+
+plot_data <- data_amer_fus[, c("Row.names","species", "Status", "AAACTAC", "AAACAAC")]
+
+#fix a typo you made in the sample names  
+
+plot_data$Row.names[6] <- "amMK0738"
+
+
+ggplot(data = plot_data, aes(x = Status, y = AAACTAC)) + 
+  geom_boxplot() +
+  geom_jitter(color="tomato") +
+  geom_text(aes(label=Row.names),hjust=0, vjust=0) +
+  theme_bw() +
+  xlab("Freq of X-4 fusion") +
+  ylab("total AAACTAC copy #") +
+  theme(text = element_text(size=14))
+
+ggplot(data = plot_data, aes(x = Status, y = AAACAAC)) + 
+  geom_boxplot() +
+  geom_jitter(color="tomato") +
+  geom_text(aes(label=Row.names),hjust=0, vjust=0) +
+  theme_bw() +
+  xlab("Freq of X-4 fusion") +
+  ylab("total AAACAAC copy #") +
+  theme(text = element_text(size=14))
+
+```
+  
+# 6) Let's look at the polymorphism in other satellites than the most abundant ones.  
+The PCA had a lot more separation when looking at the top 20 satellites than when only looking at the top 4.  That means there must be some interesting variation.   
+
+Need to check if these are satellites I mention in the manuscript. 
+```{r}
+
+ggplot(data = data_classified, aes(x = species, y = AATAATAG)) + 
+  geom_boxplot() +
+  geom_jitter(color="tomato", size = 2) +
+  theme_bw() +
+  xlab("Species") +
+  ylab("total AATAATAG copy #") +
+  theme(text = element_text(size=14))
+
+ggplot(data = data_classified, aes(x = species, y = AAACAAT)) + 
+  geom_boxplot() +
+  geom_jitter(color="tomato", size = 2) +
+  theme_bw() +
+  xlab("Species") +
+  ylab("total AAACAAT copy #") +
+  theme(text = element_text(size=14))
+
+ggplot(data = data_classified, aes(x = species, y = AAAAAC)) + 
+  geom_boxplot() +
+  geom_jitter(color="tomato", size = 2) +
+  theme_bw() +
+  xlab("Species") +
+  ylab("total AAAAAC copy #") +
+  theme(text = element_text(size=14))
+
+ggplot(data = data_classified, aes(x = species, y = ACATAT)) + 
+  geom_boxplot() +
+  geom_jitter(color="tomato", size = 2) +
+  theme_bw() +
+  xlab("Species") +
+  ylab("total ACATAT copy #") +
+  theme(text = element_text(size=14))
+
+ggplot(data = data_classified, aes(x = species, y = AATAGATT)) + 
+  geom_boxplot() +
+  geom_jitter(color="tomato", size = 2) +
+  theme_bw() +
+  xlab("Species") +
+  ylab("total AATAGATT copy #") +
+  theme(text = element_text(size=14))
+
+```
+  
+# 7) Examining the sequence identity of the satellites in the different strains in the virilis group.  
+I ran NCRF on the Illumina reads and got an estimate of the divergence of each read against the satellite consensus.  
+To get the average:  
+`cat vir51_GTGAAA_R1.AAATTAC.ncrf10.summary | cut -f 9 | sed '1d' | cut -f 1 -d "%" | awk '{sum += $1} END {print sum/NR}'`    
+
+To get the histogram:  
+`cat vir51_GTGAAA_R1.AAATTAC.ncrf10.summary | cut -f 9 | sed '1d' | cut -f 1 -d "%" > vir51.AAATTAC.div`  
+
+*Averages for AAATTAC*:  
+vir 51: 99.2845  
+vir 47: 99.1281  
+vir 08: 99.1521  
+vir 85: 99.0458  
+vir 48: 99.016   
+vir 49: 99.0608  
+vir 86: 99.1352  
+vir 00: 99.0311  
+vir 118: 99.0857  
+vir87f: 99.3137  
+vir9: 99.0107  
+vir52: 99.1317  
+vir87m: 98.8845  
+  
+  
+*Averages for AAACTAT*:  
+vir 51: 99.4189  
+vir 48: 99.214  
+vir 86: 99.3357  
+vir 00: 99.2537  
+vir 08: 99.3284  
+vir 85: 99.2455  
+vir 9: 99.1911  
+vir 47: 99.3142  
+vir 52: 99.304  
+vir 118: 99.2691  
+vir 49: 99.261  
+vir87f: 99.4603  
+vir 87m: 99.0681  
+
+``` {r fig1, fig.height=10, fig.width=8}
+# I will show some representative histograms for AAACTAT. there were not noticable differences between strains. 
+
+vir51.div2 <- read.table("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Intra_inter_species_sequencing/div_files/vir51.AAACTAT.div")
+
+vir86.div2 <- read.table("//Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Intra_inter_species_sequencing/div_files/vir86.AAACTAT.div")
+
+vir48.div2 <- read.table("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Intra_inter_species_sequencing/div_files/vir48.AAACTAT.div")
+
+vir00.div2 <- read.table("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Intra_inter_species_sequencing/div_files/vir00.AAACTAT.div")
+
+vir08.div2 <- read.table("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Intra_inter_species_sequencing/div_files/vir08.AAACTAT.div")
+
+vir85.div2 <- read.table("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Intra_inter_species_sequencing/div_files/vir85.AAACTAT.div")
+
+vir9.div2 <- read.table("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Intra_inter_species_sequencing/div_files/vir9.AAACTAT.div")
+
+vir47.div2 <- read.table("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Intra_inter_species_sequencing/div_files/vir47.AAACTAT.div")
+
+vir52.div2 <- read.table("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Intra_inter_species_sequencing/div_files/vir52.AAACTAT.div")
+
+vir118.div2 <- read.table("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Intra_inter_species_sequencing/div_files/vir118.AAACTAT.div")
+
+vir49.div2 <- read.table("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Intra_inter_species_sequencing/div_files/vir49.AAACTAT.div")
+
+vir87f.div2 <- read.table("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Intra_inter_species_sequencing/div_files/vir87f.AAACTAT.div")
+
+vir87m.div2 <- read.table("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Intra_inter_species_sequencing/div_files/vir87m.AAACTAT.div")  
+
+par(mfrow = c(4, 3))
+hist(vir51.div2$V1, xlim=c(94,100))
+hist(vir48.div2$V1, xlim=c(94,100))
+hist(vir86.div2$V1, xlim=c(94,100))
+hist(vir00.div2$V1, xlim=c(94,100))
+hist(vir08.div2$V1, xlim=c(94,100))
+hist(vir9.div2$V1, xlim=c(94,100))
+hist(vir85.div2$V1, xlim=c(94,100))
+hist(vir47.div2$V1, xlim=c(94,100))
+hist(vir52.div2$V1, xlim=c(94,100))
+hist(vir118.div2$V1, xlim=c(94,100))
+hist(vir49.div2$V1, xlim=c(94,100))
+hist(vir87f.div2$V1, xlim=c(94,100))  
+
+```
+  
+Now, the sequence identity of the pericentromeric satellite AAACTAC.  
+
+**D. virilis**:  
+vir 51: 98.4117  
+vir 00: 98.3733  
+vir 85: 98.282  
+vit 118: 98.3237  
+vir 86: 98.44  
+vir 08: 98.4376  
+vir 49: 98.3455  
+vir 52: 98.3606  
+vir 47: 98.4035  
+Gvir87f: 98.5956  
+Gvir87m: 97.9103  
+vir 48: 98.3038  
+vir 9: 98.3405  
+
+**D. novamexicana**:  
+nova8: 98.6006  
+nova12: 98.2135  
+nova4: 98.5409  
+nova13: 98.4448  
+Gnova14: 98.4718  
+
+**D. americana**:  
+amCI0538: 98.3903  
+amCI0515: 98.482  
+amMK1012: 98.5945  
+amSB: 98.3237  
+amCI0518: 98.3606  
+amML975: 98.5578  
+amG96: 98.3568  
+amML0738: 98.4075  
+
+Now, the sequence identity in the centromeric satellite *AAACAAC*:  
+  
+**D. novamexicana**:  
+nova12: 97.1442  
+nova4: 97.4311  
+nova8: 97.4563  
+nova13: 97.3354  
+Gnova14: 97.362  
+
+**D. americana**:  
+amCI0518: 97.3998  
+amCI0515: 97.5062  
+amMK1012: 97.629  
+amML0738: 97.4118  
+amSB: 97.3541  
+amCI0538: 97.4072  
+amML975: 97.4914  
+amG96: 97.3696  

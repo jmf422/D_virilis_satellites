@@ -1,0 +1,151 @@
+---
+title: "Genome_assembly_analysis"
+author: "Jullien Flynn"
+date: '2019-03-18'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This document analyzes simple satellites in various genome assemblies for D. virilis. It also analyzes complex satellites in D. virilis, D. novamexicana, and D. americana genome assemblies.  
+
+# 1) Simple satellites in the PacBio assembly  
+
+```{r}
+quickmerge_kmers <- read.delim("/Users/jullienflynn/Documents/AndyLab/Proposal/ThesisWork/Chapter1/merged.fasta_phobos.simple.out", header=FALSE)
+
+colnames (quickmerge_kmers) <- c("kmer", "count")
+
+# summarize the sequences
+quickmerge_kmers <- tapply(quickmerge_kmers$count, quickmerge_kmers$kmer, sum)
+
+quickmerge_kmers_sorted <- sort(quickmerge_kmers, decreasing=T)
+
+kmers_of_interest <- c("AAACTAC", "AAACTAT", "AAATTAC", "AAACAAC")
+
+quickmerge_kmers_sorted[kmers_of_interest]
+sum(quickmerge_kmers_sorted[kmers_of_interest])  
+```
+
+# 2) Simple satellites in the Sanger CAF1 assembly  
+
+```{r}
+sanger_kmers <- read.delim("/Users/jullienflynn/Documents/AndyLab/Proposal/ThesisWork/Chapter1/dvir-chromosomes-r1.06.fa_phobos.simple.out", header=FALSE)
+
+colnames (sanger_kmers) <- c("kmer", "count")
+
+# summarize the sequences
+sanger_kmers <- tapply(sanger_kmers$count, sanger_kmers$kmer, sum)
+
+sanger_kmers_sorted <- sort(sanger_kmers, decreasing=T)
+
+kmers_of_interest <- c("AAACTAC", "AAACTAT", "AAATTAC", "AAACAAC")
+
+sanger_kmers_sorted[kmers_of_interest]
+sum(sanger_kmers_sorted[kmers_of_interest])/10^6  
+
+```
+
+# 3) Nanopore assembly from Miller et al. (2018)  
+```{r}
+
+Dvir_nanopore <-  read.delim("~/Documents/AndyLab/Heterochromatin/Nanopore/Dvir.DMiller.phobos.simple.out", header=FALSE)
+colnames (Dvir_nanopore) <- c("kmer", "count")
+head(Dvir_nanopore)
+# summarize the sequences
+Dvir_nanopore.simple <- tapply(Dvir_nanopore$count, Dvir_nanopore$kmer, sum)
+Dvir_nanopore.simple[kmers_of_interest]
+Dvir_nanopore.simple_sorted <- sort(Dvir_nanopore.simple, decreasing=T)
+
+sum(Dvir_nanopore.simple[kmers_of_interest])  
+
+```
+
+# 4) Now the complex satellites in the D. virilis PacBio assembly  
+
+```{r}
+Dvir_complex <-  read.delim("~/Documents/AndyLab/Heterochromatin/PacBio_genomes/virilis.complexreps.simple.txt", header=FALSE)
+
+colnames (Dvir_complex) <- c("kmer", "count")
+
+# summarize the sequences
+Dvir_complex.simple <- tapply(Dvir_complex$count, Dvir_complex$kmer, sum)
+head(Dvir_complex.simple)
+Dvir_complex_sorted <- sort(Dvir_complex.simple, decreasing = T)
+
+sum(Dvir_complex_sorted)
+
+# list the top 10 most abundance satellites with their sequence and abundance.
+
+Dvir_complex_sorted[1:10]
+
+# get the repeat lengths
+rep_lengths <- nchar(names(Dvir_complex_sorted))
+names(rep_lengths) <- names(Dvir_complex_sorted)
+rep_lengths[1:10]
+
+```
+
+# 5) D. novamexicana complex satellites.  
+Note: TRF had trouble going through the whole assembly because one contig (00000018F) was highly composed of satellites. Therefore we ran TRF separately on this contig and the rest of the assembly.  
+
+```{r}
+# note: this contig is 3 Mb long in total
+
+Dnov18F_complex <-  read.delim("~/Documents/AndyLab/Heterochromatin/PacBio_genomes/Dnov18F.complexreps.filtered.nooverlap.Booths.simple", header=FALSE)
+
+colnames (Dnov18F_complex) <- c("kmer", "count")
+
+# summarize the sequences
+Dnov18F_complex.simple <- tapply(Dnov18F_complex$count, Dnov18F_complex$kmer, sum)
+head(Dnov18F_complex.simple)
+Dnov18F_complex_sorted <- sort(Dnov18F_complex.simple, decreasing = T)
+Dnov18F_complex_sorted[1:5]
+sum(Dnov18F_complex_sorted)
+
+# there are a few high abundance complex repeats. Where are these 
+rep_lengthsDnov18F <- nchar(names(Dnov18F_complex_sorted))
+names(rep_lengthsDnov18F) <- names(Dnov18F_complex_sorted)
+rep_lengthsDnov18F[1:5]
+
+Dnovallbut_complex <-  read.delim("~/Documents/AndyLab/Heterochromatin/PacBio_genomes/Dnov.allbut.complexreps.filtered.nooverlap.Booths.simple", header=FALSE)
+
+colnames (Dnovallbut_complex) <- c("kmer", "count")
+
+# summarize the sequences
+Dnovallbut_complex.simple <- tapply(Dnovallbut_complex$count, Dnovallbut_complex$kmer, sum)
+head(Dnovallbut_complex.simple)
+Dnovallbut_complex_sorted <- sort(Dnovallbut_complex.simple, decreasing = T)
+Dnovallbut_complex_sorted[1:5]
+
+# there are a few high abundance complex repeats. Where are these 
+rep_lengthsDnovallbut <- nchar(names(Dnovallbut_complex_sorted))
+names(rep_lengthsDnovallbut) <- names(Dnovallbut_complex_sorted)
+rep_lengthsDnovallbut[1:5]
+
+```
+
+# 6) D. americana complex satellites  
+
+```{r}
+amer_complex <-  read.delim("~/Documents/AndyLab/Heterochromatin/PacBio_genomes/amer.complexreps.simple.txt", header=FALSE)
+
+colnames (amer_complex) <- c("kmer", "count")
+
+# summarize the sequences
+amer_complex.simple <- tapply(amer_complex$count, amer_complex$kmer, sum)
+head(amer_complex.simple)
+amer_complex_sorted <- sort(amer_complex.simple, decreasing = T)
+amer_complex_sorted[1:10]
+sum(amer_complex_sorted) 
+
+rep_lengths <- nchar(names(amer_complex_sorted))
+names(rep_lengths) <- names(amer_complex_sorted)
+rep_lengths[1:10]
+
+# the 10th most abundant satellite in americana is the exact same 32 bp in novamexicana. 
+
+#AAAAGCTGATTGCTATATGTGCAATAGCTGAC - americana
+#AAAAGCTGATTGCTATATGTGCAATAGCTGAC - novamexicana  

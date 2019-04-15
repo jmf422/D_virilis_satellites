@@ -1,0 +1,127 @@
+---
+title: "Different_normalization"
+author: "Jullien Flynn"
+date: '2019-03-23'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This file shows the analysis with a different normalization method.  
+1) Reads were mapped to their respective genome assemblies. Prior to mapping, the assemblies were masked of the four most abundant satellites (AAACTAC, AAATTAC, AAACTAT, AAACAAC).  
+2) Contigs that are X and Y linked were discluded to reduce bias (the Y contains a high amount of low complexity sequence)-and the GC correction script was run.  
+
+# 1) Load in data and pre-process it.  
+This is the output from a GC correction on the k-seek results
+
+```{r}
+data <- read.csv('/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Intra_inter_species_sequencing/ForR/virilis_group.GCcorr.maskednolow.noXYvir.csv')
+file_names <- as.vector(data$X)
+rownames(data) <- file_names
+data[,1] <- NULL
+
+kmer_means <- colMeans(data)
+data_sorted <- data[,order(kmer_means, decreasing=T)]
+
+sample_identities <- read.table ('/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Intra_inter_species_sequencing/ForR/sample.identities', header=F)
+
+sample_names <- sample_identities$V1
+sample_identities$V1 <- NULL
+colnames(sample_identities) <- "species"
+rownames(sample_identities) <- sample_names
+
+# merge in the species identities so we can easily categorize them
+data_classified <- merge (sample_identities, data_sorted, by=0)  
+
+sample.labels <- sapply(strsplit(data_classified$Row.names, "_"), '[', 1)
+data_classified$Row.names <- sample.labels
+
+```
+Plot now  
+
+```{r}
+
+library(ggplot2)
+
+ggplot(data = data_classified, aes(x = species, y = AAACTAC)) + 
+  geom_boxplot() +
+  geom_jitter(color="tomato") +
+  xlab("Species") +
+  ylab("total AAACTAC copy #")
+
+
+kmers_of_interest <- c("AAACTAC", "AAACTAT", "AAATTAC", "AAACAAC")
+
+pca.data <- prcomp(data_classified[, kmers_of_interest], scale.=T)
+library(ggbiplot)
+
+g <- ggbiplot(pca.data, obs.scale = 1, var.scale = 1, groups = data_classified$species, var.axes = F, alpha=0.8) #labels=data3$Row.names
+g <- g + scale_color_discrete(name='')
+g <- g + theme(legend.direction='horizontal', legend.position='top')
+print(g)
+
+# let's use the whole dataset and see how the PCA looks
+pca.data <- prcomp(data_classified[,3:22], scale.=T)
+g <- ggbiplot(pca.data, obs.scale = 1, var.scale = 1, groups = data_classified$species, var.axes = F, alpha=0.8)
+g <- g + scale_color_discrete(name='')
+g <- g + theme(legend.direction='horizontal', legend.position='top')
+print(g)  
+
+```
+Now look at virilis closer  
+
+```{r}
+
+data_virilis <- subset(data_classified, species=="vir")
+vir_names <- data_virilis$Row.names
+rownames(data_virilis) <- vir_names
+data_virilis[,kmers_of_interest]*7
+totals_vir <- rowSums(data_virilis[,kmers_of_interest]*7)
+
+# which sample has the least amount of satellites and which has the most?
+totals_vir[which(totals_vir == max(totals_vir))]
+totals_vir[which(totals_vir == min(totals_vir))]
+
+# Get the mean amounts of each satellites.
+
+mean(data_virilis$AAACTAC)
+mean(data_virilis$AAACAAC)
+mean(data_virilis$AAACTAT)
+mean(data_virilis$AAATTAC)
+
+# bring in the geographical origin
+virilis_ori <- read.csv('/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Intra_inter_species_sequencing/ForR/virilis_origins.csv')
+
+virilis_ori[!apply(virilis_ori == "", 1, all),]
+
+virilis_ori$Sample <- as.vector(virilis_ori$Sample)
+sample.labels <- sapply(strsplit(virilis_ori$Sample, "_"), '[', 1)
+virilis_ori$Sample <- sample.labels
+
+data_virilis_ori <- merge(data_virilis, virilis_ori, by.x=1, by.y=1)
+  
+data_virilis_ori$Origin <- factor(data_virilis_ori$Origin, levels = c("AFR", "ENG", "USSR", "CHINA", "JAP", "NAm", "CAm", "SAm", "Un-F", "Un-M"))
+
+(plot_data <- data_virilis_ori[, c("Row.names", "Origin", "AAACTAC", "AAACTAT", "AAATTAC")])
+ggplot(plot_data, aes(y=AAATTAC*7, x=Origin)) +
+  geom_point(size=2) +
+  theme_bw() +
+  geom_text(aes(label=Row.names),hjust=0.5, vjust=1) +
+  ylab("total AAATTAC span (bp)") +
+  theme(text = element_text(size=12))
+
+ggplot(plot_data, aes(y=AAACTAC*7, x=Origin)) +
+  geom_point(size=2) +
+  theme_bw() +
+  geom_text(aes(label=Row.names),hjust=0.5, vjust=1.0) +
+  ylab("total AAACTAC span (bp)") +
+  theme(text = element_text(size=12))
+
+ggplot(plot_data, aes(y=AAACTAT*7, x=Origin)) +
+  geom_point(size=2) + 
+   theme_bw() +
+  geom_text(aes(label=Row.names),hjust=0.5, vjust=1.0) +
+  ylab("total AAACTAT span (bp)") +
+  theme(text = element_text(size=12)) 
