@@ -8,12 +8,13 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+D. montana data: from Parker et al. 2018  
 
 ```{r}
 
 # bring in the depth file (depth was calculated as the amount of bp sequenced in all reads divided by the expected genome size from Bosco et al. 2007)
 
-samples_depth <- read.table ('/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Intra_inter_species_sequencing/ForR/montana_samples_read.depth')
+samples_depth <- read.table ('/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites/Intra_inter_species_sequencing/ForR/montana_samples_read.depth')
 
 sample_names <- samples_depth$V1
 depths <- samples_depth$V3
@@ -22,7 +23,7 @@ names(depths) <- sample_names
 
 #now bring in the compiled data. 
 
-data2 <- read.table ('/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Intra_inter_species_sequencing/ForR/Dmontana.rep.compiled', header=T)
+data2 <- read.table ('/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites/Intra_inter_species_sequencing/ForR/Dmontana.rep.compiled', header=T)
 
 kmer.labels <- sapply(strsplit(colnames(data2), "\\."), '[', 1)
 colnames(data2) <- kmer.labels
@@ -109,3 +110,39 @@ ggplot(montana_df, aes(fill=species, x=factor(kmer_class), y=repeat_span)) +
   theme(axis.text.y = element_text(size=13), axis.title = element_text(size=13))
 
 # ok, AAAC is the most abundant
+
+```
+* D. lummei *  
+Data from Ahmed-Braimah et al. 2017  
+
+```{r}
+
+reads_bases <- 3974082307
+genome_size <- 250E6
+(depth <- reads_bases/genome_size)
+
+data2 <- read.table ('/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites/Intra_inter_species_sequencing/ForR/Dlummei.rep.compiled', header=T)
+
+kmer.labels <- sapply(strsplit(colnames(data2), "\\."), '[', 1)
+colnames(data2) <- kmer.labels
+samples <- as.vector(data2$lines)
+samples2 <- sapply(strsplit(samples, "[.]"), '[', 1)
+#samples2
+data2[,1] <- NULL
+rownames(data2) <- samples2
+
+data2[,1:10]
+
+data2_normalized <- data2/depth
+
+# now sort the data
+kmer_means <- colMeans(data2)
+data2_normalized_sorted <- data2_normalized[,order(kmer_means, decreasing=T)]
+data2_normalized_sorted[,1:20]
+
+34105.8*7 
+# not so much
+
+# lummei has only AAACTAC
+
+# add this data in.
