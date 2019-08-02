@@ -15,7 +15,7 @@ This file goes through the analysis of long read data (PacBio and Nanopore) usin
 
 ```{r}
 
-Dvir_reps <-  read.delim("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/LongRead_kseek_Phobos/ForR/D_virilis.all.phobos.simple.out", header=FALSE)
+Dvir_reps <-  read.delim("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis_backup/LongRead_kseek_Phobos/ForR/D_virilis.all.phobos.simple.out", header=FALSE)
 
 colnames (Dvir_reps) <- c("kmer", "count")
 
@@ -39,14 +39,14 @@ sum(Dvir_reps_sorted_norm[kmers_of_interest])
 # 2) D. novamexicana PacBio data  
 
 ```{r}
-Dnova.simple.out.all <- read.delim("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/LongRead_kseek_Phobos/ForR/Dnovamex.all.simple.out", header=FALSE)
+Dnova.simple.out.all <- read.delim("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis_backup/LongRead_kseek_Phobos/ForR/Dnovamex.all.simple.out", header=FALSE)
 colnames (Dnova.simple.out.all) <- c("kmer", "count")
 
 # summarize the sequences
 Dnova.simple <- tapply(Dnova.simple.out.all$count, Dnova.simple.out.all$kmer, sum)
 
 Dnova_total_bases <- 40712554490
-Dnova_genome_size <- 2.5E8
+Dnova_genome_size <- 2.44E8
 (Dnova_depth <- Dnova_total_bases/2.5E8)
 
 Dnova_norm <- Dnova.simple/Dnova_depth
@@ -65,7 +65,7 @@ sum(Dnova_sorted_norm[kmers_of_interest])
 
 ```{r}
 
-D_americana_reps <-  read.delim("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/LongRead_kseek_Phobos/ForR/D_americana_all.phobos.simple.out", header=FALSE)
+D_americana_reps <-  read.delim("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis_backup/LongRead_kseek_Phobos/ForR/amCCS.all.phobos.simple.out", header=FALSE)
 
 colnames (D_americana_reps) <- c("kmer", "count")
 
@@ -73,7 +73,7 @@ colnames (D_americana_reps) <- c("kmer", "count")
 D_americana_reps.simple <- tapply(D_americana_reps$count, D_americana_reps$kmer, sum)
 D_americana_reps_sorted <- sort(D_americana_reps.simple, decreasing = T)
 
-total_bp <- 32814203651
+total_bp <- 2808871904
 genome_size <- 240000000
 (depth <- total_bp/genome_size)
 
@@ -81,6 +81,7 @@ D_americana_reps_sorted_norm <- D_americana_reps_sorted/depth
 
 D_americana_reps_sorted_norm[1:5]
 D_americana_reps_sorted_norm[kmers_of_interest]
+sum(D_americana_reps_sorted_norm[kmers_of_interest])
 
 ```
 
@@ -88,13 +89,13 @@ D_americana_reps_sorted_norm[kmers_of_interest]
 
 ```{r}
 
-Dhyd.simple.out.all <- read.delim("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/LongRead_kseek_Phobos/ForR/Dhydei.simple.out.all.filtered", header=FALSE)
+Dhyd.simple.out.all <- read.delim("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis_backup/LongRead_kseek_Phobos/ForR/Dhydei.simple.out.all.filtered", header=FALSE)
 colnames (Dhyd.simple.out.all) <- c("kmer", "count")
 
 # summarize the sequences
 Dhyd.simple <- tapply(Dhyd.simple.out.all$count, Dhyd.simple.out.all$kmer, sum)
 
-assembly_size <- 1.64E8
+assembly_size <- 1.77E8
 reads_bases <- 19564840690
 (depth <- reads_bases/assembly_size)
 
@@ -112,9 +113,7 @@ length_classify <- function (kmer_sequence) {
   x <- NULL
   if (nchar(kmer_sequence) == 1) { x <- "1mer" }
   else if (nchar(kmer_sequence) == 2) { x <- "2mer" }
-  else if (nchar(kmer_sequence) == 3) {  x <- "3mer" }
-  else if (nchar(kmer_sequence) == 4) { x <- "4mer" }
-  else if (nchar(kmer_sequence) == 5) { x <- "5mer" }
+  else if (nchar(kmer_sequence) > 2 & nchar(kmer_sequence) < 6) { x <- "3-5mer" }
   else if (nchar(kmer_sequence) == 6) { x <- "6mer" }
   else if (nchar(kmer_sequence) == 7) { x <- "7mer" }
   else if (nchar(kmer_sequence) > 7 & nchar(kmer_sequence) < 21) { x <- "8-20mer" }
@@ -124,15 +123,13 @@ length_classify <- function (kmer_sequence) {
 sum_kmer_class <- function (abundance_vec, class_vector) {
   a <- sum(abundance_vec[which(class_vector == "1mer" )])
   b <- sum(abundance_vec[which(class_vector == "2mer" )])
-  c <- sum(abundance_vec[which(class_vector == "3mer" )])
-  d <- sum(abundance_vec[which(class_vector == "4mer" )])
-  e <- sum(abundance_vec[which(class_vector == "5mer" )])
-  f <- sum(abundance_vec[which(class_vector == "6mer" )])
-  g <- sum(abundance_vec[which(class_vector == "7mer" )])
-  h <- sum(abundance_vec[which(class_vector == "8-20mer" )])
+  c <- sum(abundance_vec[which(class_vector == "3-5mer" )])
+  d <- sum(abundance_vec[which(class_vector == "6mer" )])
+  e <- sum(abundance_vec[which(class_vector == "7mer" )])
+  f <- sum(abundance_vec[which(class_vector == "8-20mer" )])
   
-  output <- c(a,b,c,d,e,f,g,h)
-  names(output) <- c("1mer", "2mer", "3mer", "4mer", "5mer", "6mer", "7mer", "8-20mer")
+  output <- c(a,b,c,d,e,f)
+  names(output) <- c("1mer", "2mer", "3-5mer", "6mer", "7mer", "8-20mer")
   return(output)
 }
 
@@ -144,16 +141,20 @@ Dnova_kmer_class <- sapply(names(Dnova_sorted_norm), length_classify)
 Dnova_sum_class <- sum_kmer_class(Dnova_sorted_norm, Dnova_kmer_class)
 Dnova_df <- data.frame(kmer_class=names(Dnova_sum_class), repeat_span=Dnova_sum_class, species="nova")
 
+Damer_kmer_class <- sapply(names(D_americana_reps_sorted_norm), length_classify)
+Damer_sum_class <- sum_kmer_class(D_americana_reps_sorted_norm, Damer_kmer_class)
+Damer_df <- data.frame(kmer_class=names(Damer_sum_class), repeat_span=Damer_sum_class, species="amer")
+
 Dhyd_kmer_class <- sapply(names(Dhyd.simple.norm.sorted), length_classify)
 Dhyd_sum_class <- sum_kmer_class(Dhyd.simple.norm.sorted, Dhyd_kmer_class)
 Dhyd_df <- data.frame(kmer_class=names(Dhyd_sum_class), repeat_span=Dhyd_sum_class, species="hydei")
 
-repeatspan_df <- rbind(Dvir_df, Dnova_df, Dhyd_df)
-
+repeatspan_df <- rbind(Dvir_df, Dnova_df, Damer_df, Dhyd_df)
+options(scipen=-1)
 library(ggplot2)
 ggplot(repeatspan_df, aes(fill=species, x=factor(kmer_class), y=repeat_span)) + 
   geom_bar(position="dodge", stat="identity") + 
-  ylab("Total repeat span") +
+  ylab("Total repeat span (bp)") +
   #scale_x_discrete(limits = repeatspan_df$kmer_class) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, size=13, hjust = 1)) +
@@ -165,7 +166,7 @@ ggplot(repeatspan_df, aes(fill=species, x=factor(kmer_class), y=repeat_span)) +
 
 ```{r}
 
-Dvir_pore_reps <-  read.delim("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/LongRead_kseek_Phobos/ForR/Dvir.nanopore.phobos.all.simple.out", header=FALSE)
+Dvir_pore_reps <-  read.delim("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis_backup/LongRead_kseek_Phobos/ForR/Dvir.nanopore.phobos.all.simple.out", header=FALSE)
 
 colnames (Dvir_pore_reps) <- c("kmer", "count")
 
@@ -191,7 +192,7 @@ sum(Dvir_porereps_sorted_norm[kmers_of_interest2])
 
 # make a plot now including Nanopore and PacBio amounts
 
-vir_sat <- read.csv("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/LongRead_kseek_Phobos/ForR/virilis_satellite_quant.csv", header=T)
+vir_sat <- read.csv("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites/LongRead_kseek_Phobos/ForR/virilis_satellite_quant.csv", header=T)
 vir_sat
 
 (Pacbio_sats <- subset(vir_sat, Platform=="PacBio"))
@@ -242,7 +243,7 @@ ggplot(Nanopore_sats, aes(fill=Approach, y=Amount, x=Satellite)) +
 # 6) Strand bias in the PacBio and Nanopore data
 
 ```{r}
-strand_bias <- read.csv(file="/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/LongRead_kseek_Phobos/ForR/Strand_bias_summary2.csv", header=T)
+strand_bias <- read.csv(file="/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites/LongRead_kseek_Phobos/ForR/Strand_bias_summary2.csv", header=T)
 
 Pacbio_strand <- subset(strand_bias, Platform=="PacBio_real")
 
