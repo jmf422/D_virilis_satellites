@@ -17,7 +17,7 @@ Then we go on to analyze D. virilis data we produced ourselves from imaginal dis
 
 ```{r}
 
-kseek_data <- read.csv("~/Documents/AndyLab/Illumina-sequencing/melpolyteny.rep.compiled.GCcorr")
+kseek_data <- read.csv("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites/Polyteny/ForR/melpolyteny.rep.compiled.GCcorr")
 
 # clean up data
 file_names <- as.vector(kseek_data$X)
@@ -122,7 +122,7 @@ ggplot(data = kseek_to_plot, aes(x = kmer_names, y = kmer_abundances, fill = sam
 depth <- c(15.506, 3.894)
 names(depth) <- c("Dvir_disks", "Dvir_flies")
 
-data2 <- read.delim ('/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Polyteny/ForR/Dvir_polyteny.rep.compiled')
+data2 <- read.delim ('/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites/Polyteny/ForR/Dvir_polyteny.rep.compiled')
 kmer.labels <- sapply(strsplit(colnames(data2), "\\."), '[', 1)
 colnames(data2) <- kmer.labels
 samples <- as.vector(data2$lines)
@@ -155,7 +155,7 @@ data2_normalized_sorted[, kmers_of_interest]
 ```{r}
 depth <- c(18.44, 4.597)
 names(depth) <- c("Dvir_disks", "Dvir_flies")
-data3 <- read.delim ('/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Polyteny/ForR/Dvir_polyteny.allreads.rep.compiled')
+data3 <- read.delim ('/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites/Polyteny/ForR/Dvir_polyteny.allreads.rep.compiled')
 
 kmer.labels <- sapply(strsplit(colnames(data3), "\\."), '[', 1)
 colnames(data3) <- kmer.labels
@@ -180,6 +180,7 @@ rownames (no_qfiltering) <- c("no-filter")
 rownames (post_qfiltering_flies) <- c("q-filter")
 post_qfiltering_flies
 filter_compare <- rbind(no_qfiltering, post_qfiltering_flies)
+
 
 # now let's make a plot.
 kmer_abundances <- c()
@@ -227,9 +228,26 @@ for (j in 1:ncol(data_subset)) {
 polyteny_fig <- data.frame(sample_names, sample_category, kmer_names, kmer_abundances)
 polyteny_fig
 
-ggplot(data = polyteny_fig, aes(x = kmer_names, y = kmer_abundances, fill = sample_category )) +
+wei <- data.frame( "sample_names" = c("Dvir_wei", "Dvir_wei", "Dvir_wei"), "sample_category" = c("wei", "wei", "wei"), "kmer_names" = c("AAACTAC", "AAACTAT", "AAATTAC"), "kmer_abundances" = c(7099097, 490963, 540644))
+str(wei)
+wei
+
+merged_polyteny <- rbind (polyteny_fig, wei)
+merged_polyteny
+merged_polyteny$kmer_abundances <- merged_polyteny$kmer_abundances/10^6
+
+#install.packages("wesanderson")
+library(wesanderson)
+
+#options(scipen=999)
+# darjeeling2 looks good to me.
+ggplot(data = merged_polyteny, aes(x = kmer_names, y = kmer_abundances, fill = sample_category )) +
   geom_bar(stat = "identity", position = "dodge") +
-  theme_bw() 
+  theme_bw() +
+  scale_fill_manual(values = wes_palette("Darjeeling2", n = 4)) +
+  ylab ("Satellite amount (Mb)") +
+  theme(text = element_text(size=12))
+
   
 # total Mb of repeats
 # discs

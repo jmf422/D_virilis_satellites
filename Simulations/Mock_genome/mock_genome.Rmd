@@ -94,7 +94,7 @@ Now let's look at the NCRF results - simulate different percent divergences allo
 
 ```{r}
 
-repeats.percents <- read.delim("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Simulations/Mock_genome/repeats.found.percents", header=FALSE)
+repeats.percents <- read.delim("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites/Simulations/Mock_genome/repeats.found.percents", header=FALSE)
 colnames(repeats.percents) <- c("sat", "perc", "bp")
 repeats.percents$sat <- as.factor(repeats.percents$sat)
 repeats.percents
@@ -111,14 +111,18 @@ repeats.percents
 Now make cumulative bar plot showing the quantification of satellites from the mock genome using the two different methods and the ground truth. 
 
 ```{r}
-
-NCRF_amounts <- read.csv("~/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites_analysis/Simulations/Mock_genome/NCRF_simulated25_amounts.csv", header=T)
+library(wesanderson)
+NCRF_amounts <- read.csv("~/Documents/AndyLab/Heterochromatin/PacBio_scripts/Revised_scripts/D_virilis_satellites/Simulations/Mock_genome/simulation_results_final.csv", header=T)
 NCRF_amounts
 library(ggplot2)
+NCRF_amounts$Amount <- NCRF_amounts$Amount/10^6
+
 ggplot(NCRF_amounts) +
-  geom_bar(aes(y=Amount, x=Satellite, fill=factor(Category, levels=c("actual", "found_NCRF", "found_KP"))), stat="identity") +
+  geom_bar(aes(y=Amount, x=Satellite, fill=factor(Category, levels=c("actual", "found_NCRF", "found_KP"))), stat="identity", position = "dodge") +
   theme_bw() +
-  scale_x_discrete(limits = NCRF_amounts$Satellite) +
+ scale_fill_manual(values = wes_palette("Darjeeling2", n = 4)) +
   theme(legend.title=element_blank()) + 
   theme(text = element_text(size=14)) + 
-  ylab("Amount (bp)")
+  ylab("Satellite amount (Mb)")
+
+#"#FF33CC"

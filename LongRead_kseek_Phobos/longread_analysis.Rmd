@@ -196,44 +196,32 @@ vir_sat <- read.csv("/Users/jullienflynn/Documents/AndyLab/Heterochromatin/PacBi
 vir_sat
 
 (Pacbio_sats <- subset(vir_sat, Platform=="PacBio"))
-library(ggplot2)
-ggplot(Pacbio_sats, aes(fill=Approach, y=Amount, x=Satellite)) +
-  geom_bar(position="dodge", stat="identity") +
-  theme_bw() +
-  scale_x_discrete(limits = Pacbio_sats$Satellite) +
-  scale_y_continuous(limits=c(0,2.6e+07)) +
-  theme(legend.title=element_blank()) + 
-  theme(text = element_text(size=14)) + 
-  ylab("Amount (bp)") 
+Pacbio_sats$Amount <- Pacbio_sats$Amount/10^6
 
-# this one is for my presentation
+library(ggplot2)
+library(wesanderson)
 ggplot(Pacbio_sats, aes(fill=Approach, y=Amount, x=Satellite)) +
   geom_bar(position="dodge", stat="identity") +
   theme_bw() +
+  scale_fill_manual(values = wes_palette("Darjeeling2", n = 2)) +
   scale_x_discrete(limits = Pacbio_sats$Satellite) +
+  scale_y_continuous(limits=c(0,28.5)) +
   theme(legend.title=element_blank()) + 
   theme(text = element_text(size=14)) + 
-  ylab("Amount (bp)")
+  ylab("Satellite Amount (Mp)") 
 
 
 (Pacbio_sats <- subset(vir_sat, Platform=="PacBio"))
-library(ggplot2)
-ggplot(Pacbio_sats, aes(fill=Approach, y=Amount, x=Satellite)) +
-  geom_bar(position="dodge", stat="identity") +
-  theme_bw() +
-  scale_x_discrete(limits = Pacbio_sats$Satellite) +
-  scale_y_continuous(limits=c(0,2.85e+07)) +
-  theme(legend.title=element_blank()) + 
-  theme(text = element_text(size=14)) + 
-  ylab("Amount (bp)")
 
 (Nanopore_sats <- subset(vir_sat, Platform=="Nanopore"))
+Nanopore_sats$Amount <- Nanopore_sats$Amount/10^6
 
 ggplot(Nanopore_sats, aes(fill=Approach, y=Amount, x=Satellite)) +
   geom_bar(position="dodge", stat="identity") +
   theme_bw() +
+  scale_fill_manual(values = wes_palette("Darjeeling2", n = 2)) +
   scale_x_discrete(limits = Nanopore_sats$Satellite) +
-  scale_y_continuous(limits=c(0,2.85e+07)) +
+  scale_y_continuous(limits=c(0,28.5)) +
   theme(legend.title=element_blank()) + 
   theme(text = element_text(size=14)) + 
   ylab("Amount (bp)") 
@@ -248,8 +236,9 @@ strand_bias <- read.csv(file="/Users/jullienflynn/Documents/AndyLab/Heterochroma
 Pacbio_strand <- subset(strand_bias, Platform=="PacBio_real")
 
 ggplot(Pacbio_strand) +
-  geom_bar(aes(y=Percent, x=Satellite, fill=factor(Strand, levels=c("neg", "pos"))), stat="identity") +
+  geom_bar(aes(y=Percent, x=Satellite, fill=factor(Strand, levels=c("neg", "pos"))), stat="identity", width = 0.5) +
   theme_bw() +
+  scale_fill_manual(values = wes_palette("Darjeeling2", n = 2)) +
   scale_x_discrete(limits = Pacbio_strand$Satellite) +
   theme(legend.title=element_blank()) +
   theme(text = element_text(size=14), axis.text.x = element_text(angle=45, hjust=1))
@@ -258,8 +247,9 @@ Pacbio_sim <- subset(strand_bias, Platform=="PacBio_sim")
 
 
 ggplot(Pacbio_sim) +
-  geom_bar(aes(y=Percent, x=Satellite, fill=factor(Strand, levels=c("neg", "pos"))), stat="identity") +
+  geom_bar(aes(y=Percent, x=Satellite, fill=factor(Strand, levels=c("neg", "pos"))), stat="identity", width = 0.5) +
   theme_bw() +
+  scale_fill_manual(values = wes_palette("Darjeeling2", n = 2)) +
   scale_x_discrete(limits = Pacbio_sim$Satellite) +
   theme(legend.title=element_blank()) +
   theme(text = element_text(size=14), axis.text.x = element_text(angle=45, hjust=1))
@@ -270,6 +260,7 @@ Nanopore_real <- subset(strand_bias, Platform=="Nanopore_real")
 ggplot(Nanopore_real) +
   geom_bar(aes(y=Percent, x=Satellite,  fill=factor(Strand, levels=c("neg", "pos"))), stat="identity", width = 0.5) +
   theme_bw() +
+  scale_fill_manual(values = wes_palette("Darjeeling2", n = 2)) +
   scale_x_discrete(limits = Nanopore_real$Satellite) +
   theme(legend.title=element_blank()) +
   theme(text = element_text(size=14), axis.text.x = element_text(angle=45, hjust=1))  

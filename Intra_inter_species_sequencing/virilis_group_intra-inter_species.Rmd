@@ -142,10 +142,10 @@ virilis_ori$Sample <- sample.labels
 
 data_virilis_ori <- merge(data_virilis, virilis_ori, by.x=1, by.y=1)
   
-data_virilis_ori$Origin <- factor(data_virilis_ori$Origin, levels = c("Africa", "USSR", "CHINA", "JAPAN", "N.Amer", "C.Amer", "S.Amer", "Unknown"))
+data_virilis_ori$Origin <- factor(data_virilis_ori$Origin, levels = c("Africa", "Russia", "China", "Japan", "N.Amer", "C.Amer", "S.Amer", "Genome.strain"))
 
 
-#data_virilis_ori <- data_virilis_ori[-2,]
+data_virilis_ori <- data_virilis_ori[-2,]
 options(scipen=999)
 
 pca.data <- prcomp(data_virilis_ori[, kmers_of_interest], scale.=T)
@@ -166,29 +166,34 @@ print(g)
 
 
 (plot_data <- data_virilis_ori[, c("Row.names", "total_bp", "Origin", "AAACTAC", "AAACTAT", "AAATTAC")])
-options(scipen=-10)
-ggplot(plot_data, aes(y=AAATTAC*7, x=Origin)) +
+plot_data$total_bp <- plot_data$total_bp/10^6
+plot_data$AAACTAC <- plot_data$AAACTAC*7/10^6
+plot_data$AAACTAT <- plot_data$AAACTAT*7/10^6
+plot_data$AAATTAC <- plot_data$AAATTAC*7/10^6
+
+options(scipen=500)
+ggplot(plot_data, aes(y=AAATTAC, x=Origin)) +
   geom_point(size=2, color='coral2') +
   theme_bw() +
   geom_text(aes(label=Row.names),hjust=0.5, vjust=1) +
-  ylab("total AAATTAC span (bp)") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size=12)) +
+  ylab("AAATTAC Abundance (Mb)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size=14)) +
   theme(text = element_text(size=12))
 
-ggplot(plot_data, aes(y=AAACTAC*7, x=Origin)) +
+ggplot(plot_data, aes(y=AAACTAC, x=Origin)) +
   geom_point(size=2, color='coral2') +
   theme_bw() +
   geom_text(aes(label=Row.names),hjust=0.5, vjust=1.0) +
-  ylab("total AAACTAC span (bp)") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size=12)) +
+  ylab("AAACTAC Abundance (Mb)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size=14)) +
   theme(text = element_text(size=12))
 
-ggplot(plot_data, aes(y=AAACTAT*7, x=Origin)) +
+ggplot(plot_data, aes(y=AAACTAT, x=Origin)) +
   geom_point(size=2, color='coral2') + 
    theme_bw() +
   geom_text(aes(label=Row.names),hjust=0.5, vjust=1.0) +
-  ylab("total AAACTAT span (bp)") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size=12)) +
+  ylab("AAACTAT Abundance (Mb)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size=14)) +
   theme(text = element_text(size=12)) 
 
 ggplot(plot_data, aes(y=total_bp, x=Origin)) +
@@ -199,7 +204,7 @@ ggplot(plot_data, aes(y=total_bp, x=Origin)) +
   theme(text = element_text(size=12)) 
 # not a strong pattern in total bp  
 
-ggplot(plot_data, aes(y=AAATTAC, x=AAACTAT)) +
+ggplot(plot_data, aes(x=AAATTAC, y=AAACTAT)) +
   geom_point(size=2) + 
    theme_bw() +
   geom_text(aes(label=Row.names),hjust=0.5, vjust=1.0) +
@@ -215,6 +220,14 @@ ggplot(plot_data, aes(y=AAATTAC, x=total_bp)) +
   xlab("total_bp") +
   theme(text = element_text(size=12))
 #interesting pattern here
+
+ggplot(plot_data, aes(y=AAACTAT, x=total_bp)) +
+  geom_point(size=2) + 
+   theme_bw() +
+  geom_text(aes(label=Row.names),hjust=0.5, vjust=1.0) +
+  ylab("AAATTAC") +
+  xlab("total_bp") +
+  theme(text = element_text(size=12))
 
 ```
   
